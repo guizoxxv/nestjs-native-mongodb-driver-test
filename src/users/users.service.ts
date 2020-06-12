@@ -1,75 +1,68 @@
-import { Injectable, NotFoundException, Body } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { User } from './interfaces/user.interface';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
+import { Db, ObjectID } from 'mongodb';
 
 @Injectable()
 export class UsersService {
-  private users: User[] = [
-    {
-      id: 1,
-      name: 'Huguinho',
-      email: 'huguinho@example.com',
-      age: 10,
-    },
-    {
-      id: 2,
-      name: 'Zezinho',
-      email: 'zezinho@example.com',
-      age: 20,
-    },
-    {
-      id: 3,
-      name: 'Luizinho',
-      email: 'luizinho@example.com',
-      age: 30,
-    },
-  ];
+  constructor(
+    @Inject('DATABASE_CONNECTION')
+    private db: Db,
+  ) {}
 
-  find(): User[] {
-    return this.users;
+  async find(): Promise<User[]> {
+    return await this.db.collection('users').find().toArray();
   }
 
-  findOne(id: string): User {
-    let result = this.users.find(user => user.id === parseInt(id));
-
-    if (! result) {
-      throw new NotFoundException;
+  async findOne(id: string): Promise<User> {
+    if (!ObjectID.isValid(id)) {
+      throw new BadRequestException;
     }
 
-    return result;
-  }
-
-  create(body: CreateUserDto): void {
-    this.users.push(body);
-  }
-
-  update(body: UpdateUserDto): void {
-    let result = this.users.find(user => user.id === body.id);
-
-    if (! result) {
-      throw new NotFoundException;
-    }
-
-    this.users = this.users.map(user => {
-      if (user.id === body.id) {
-        return {
-          ...user,
-          ...body,
-        }
-      }
-
-      return user;
+    const response = await this.db.collection('users').findOne({
+      _id: new ObjectID(id),
     });
-  }
 
-  delete(id: string): void {
-    let result = this.users.find(user => user.id === parseInt(id));
-
-    if (! result) {
+    if (!response) {
       throw new NotFoundException;
     }
 
-    this.users = this.users.filter(user => user.id !== parseInt(id));
+    return response;
+  }
+
+  async create(body: CreateUserDto): Promise<void> {
+    await this.db.collection('users').insert(body);
+  }
+
+  async update(id: string, body: UpdateUserDto): Promise<void> {
+    if (!ObjectID.isValid(id)) {
+      throw new BadRequestException;
+    }
+
+    await this.db.collection('users').updateOne(
+      {
+        _id: new ObjectID(id),
+      },
+      {
+        $set: {
+          ...body,
+        },
+      },
+    );
+  }
+
+  async delete(id: string): Promise<void> {
+    if (!ObjectID.isValid(id)) {
+      throw new BadRequestException;
+    }
+
+    const response = await this.db.collection('users').deleteOne({
+      _id: new ObjectID(id),
+    });
+
+    if (response.deletedCount === 0) {
+      throw new NotFoundException;
+    }
   }
 }

@@ -9,27 +9,30 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  find(): User[] {
-    return this.usersService.find();
+  async find(): Promise<User[]> {
+    return await this.usersService.find();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): User {
-    return this.usersService.findOne(id);
+  async findOne(@Param('id') id: string): Promise<User> {
+    return await this.usersService.findOne(id);
   }
 
   @Post()
-  create(@Body() body: CreateUserDto): void {
-    return this.usersService.create(body);
+  async create(@Body() body: CreateUserDto): Promise<void> {
+    await this.usersService.create(body);
   }
 
-  @Put()
-  update(@Body() body: UpdateUserDto): void {
-    return this.usersService.update(body);
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateUserDto
+  ): Promise<void> {
+    await this.usersService.update(id, body);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string): void {
-    return this.usersService.delete(id);
+  async delete(@Param('id') id: string): Promise<void> {
+    await this.usersService.delete(id);
   }
 }
